@@ -5,11 +5,12 @@ package cluster
 
 import (
 	"bytes"
-	"client-go/gen-go/rpc"
 	"context"
+	"reflect"
 	"fmt"
 	"github.com/apache/thrift/lib/go/thrift"
-	"reflect"
+	"rpc"
+
 )
 
 // (needed to ensure safety because of naive import list construction.)
@@ -23,3 +24,4 @@ var _ = rpc.GoUnusedProtection__
 
 func init() {
 }
+
