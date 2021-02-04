@@ -77,13 +77,13 @@ func (s_ *Session) Open(enable_rpc_compression bool) {
 	iprot := protocolFactory.GetProtocol(transport)
 	oprot := protocolFactory.GetProtocol(transport)
 
-	client := rpc.NewTSIServiceClient(thrift.NewTStandardClient(iprot, oprot))
+	s_.Client = rpc.NewTSIServiceClient(thrift.NewTStandardClient(iprot, oprot))
 	req := rpc.NewTSOpenSessionReq()
 	req.ClientProtocol = s_.ProtocolVersion
 	req.Username = &s_.User
 	req.Password = &s_.Password
 	req.ZoneId = s_.ZoneId
-	rsp, err := client.OpenSession(default_Ctx, req)
+	rsp, err := s_.Client.OpenSession(default_Ctx, req)
 	if err == nil {
 		if rsp.GetServerProtocolVersion() != s_.ProtocolVersion {
 			fmt.Printf("Error ProtocolVersion Differ, Client Version{%v}, Server Version{%v}\n", s_.ProtocolVersion, rsp.GetServerProtocolVersion())
