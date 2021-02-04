@@ -25,7 +25,7 @@ type Session struct {
 var default_Ctx = context.Background()
 var default_UserName = "root"
 var default_Passwd = "root"
-var default_Host = "192.168.5.171"
+var default_Host = "127.0.0.1"
 var default_Port = "6667"
 var default_ZoneId = "UTC+8"
 var default_SuccessCode = 200
@@ -49,23 +49,34 @@ func (s_ *Session) Close(enable_rpc_compression bool) {
 	s_.IsClose = true
 }
 
-func (s_ *Session) Open(enable_rpc_compression bool) error {
+func (s_ *Session) Open(enable_rpc_compression bool) {
+	if s_.Is_Open() {
+		return
+	}
 	transportFactory := thrift.NewTFramedTransportFactory(thrift.NewTTransportFactory())
-	protocolFactory := thrift.NewTBinaryProtocolFactoryDefault()
+	var protocolFactory thrift.TProtocolFactory
+	if enable_rpc_compression {
+		protocolFactory = thrift.NewTCompactProtocolFactory()
+	} else {
+		protocolFactory = thrift.NewTBinaryProtocolFactoryDefault()
+	}
 	tSocket, err := thrift.NewTSocket(s_.Host + ":" + s_.Port)
 	if err != nil {
 		fmt.Println("Error opening socket:", err)
-		return err
+		return
 	}
 	transport, err := transportFactory.GetTransport(tSocket)
 	if err != nil {
-		return err
+		fmt.Println("Error getting Transport:", err)
+		return
 	}
 	if err := transport.Open(); err != nil {
-		return err
+		fmt.Println("Error opening Transport:", err)
+		return
 	}
 	iprot := protocolFactory.GetProtocol(transport)
 	oprot := protocolFactory.GetProtocol(transport)
+
 	client := rpc.NewTSIServiceClient(thrift.NewTStandardClient(iprot, oprot))
 	req := rpc.NewTSOpenSessionReq()
 	req.ClientProtocol = s_.ProtocolVersion
@@ -74,12 +85,16 @@ func (s_ *Session) Open(enable_rpc_compression bool) error {
 	req.ZoneId = s_.ZoneId
 	rsp, err := client.OpenSession(default_Ctx, req)
 	if err == nil {
-		fmt.Printf("Open:::", rsp)
+		if rsp.GetServerProtocolVersion() != s_.ProtocolVersion {
+			fmt.Printf("Error ProtocolVersion Differ, Client Version{%v}, Server Version{%v}\n", s_.ProtocolVersion, rsp.GetServerProtocolVersion())
+			return
+		}
+		fmt.Printf("OpenRsp:::%v\n", rsp)
 		s_.SessionId = *rsp.SessionId
 		s_.StatumentId, _ = s_.Client.RequestStatementId(default_Ctx, s_.SessionId)
 		s_.IsClose = false
 	} else {
-		fmt.Printf("OpenError:::", err)
+		fmt.Println("Error OpenRequest:", err)
+		return
 	}
-	return err
 }
