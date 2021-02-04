@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	utils.StartFactory()
+	utils.NewSession().Open(true)
 }
