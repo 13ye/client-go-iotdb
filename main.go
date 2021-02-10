@@ -1,9 +1,10 @@
 package main
 
 import (
+	"client-go-iotdb/session"
 	"client-go-iotdb/utils"
 )
 
 func main() {
-	utils.NewSession().Open(true)
+	session.NewSession().Open(true)
 }
