@@ -5,5 +5,5 @@ import (
 )
 
 func main() {
-	session.NewSession().Open(true)
+	session.NewSession().Open(false)
 }
