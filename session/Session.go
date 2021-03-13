@@ -7,7 +7,6 @@ import (
 	"context"
 	"encoding/binary"
 	"fmt"
-
 	"github.com/apache/thrift/lib/go/thrift"
 )
 
@@ -30,7 +29,7 @@ type Session struct {
 var default_Ctx = context.Background()
 var default_UserName = "root"
 var default_Passwd = "root"
-var default_Host = "127.0.0.1"
+var default_Host = "192.168.5.171"
 var default_Port = "6667"
 var default_ZoneId = "UTC+8"
 var default_SuccessCode int64 = 200
@@ -99,7 +98,7 @@ func (s_ *Session) Open(enable_rpc_compression bool) {
 		s_.StatementId, _ = s_.Client.RequestStatementId(default_Ctx, s_.SessionId)
 		s_.IsClose = false
 	} else {
-		fmt.Println("Error OpenRequest:", err)
+		fmt.Println("Error OpenRequest:", err, rsp)
 		return
 	}
 }

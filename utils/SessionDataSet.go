@@ -42,7 +42,7 @@ func (s_ *SessionDataSet) ConstructRowRecordFromValueArray() *RowRecord {
 	outFields := make([]Field, 0)
 	for i := 0; i < s_.MyRpcDataSet.GetColumnSize(); i++ {
 		index := i + 1
-		datasetColumnIndex := i + start_index
+		datasetColumnIndex := i + int(start_index)
 		if s_.MyRpcDataSet.GetIgnoreTimestamp() {
 			index -= 1
 			datasetColumnIndex -= 1
@@ -61,7 +61,7 @@ func (s_ *SessionDataSet) ConstructRowRecordFromValueArray() *RowRecord {
 				err := binary.Read(bytes.NewBuffer(valueBytes), binary.BigEndian, value)
 				if err != nil {
 					fmt.Printf("binary.Read Error Occurred! {%v}\n", err)
-					return
+					return nil
 				}
 				field.SetBooleanValue(*value)
 			case TSDataType.INT32:
@@ -69,7 +69,7 @@ func (s_ *SessionDataSet) ConstructRowRecordFromValueArray() *RowRecord {
 				err := binary.Read(bytes.NewBuffer(valueBytes), binary.BigEndian, value)
 				if err != nil {
 					fmt.Printf("binary.Read Error Occurred! {%v}\n", err)
-					return
+					return nil
 				}
 				field.SetInt32Value(*value)
 			case TSDataType.INT64:
@@ -77,7 +77,7 @@ func (s_ *SessionDataSet) ConstructRowRecordFromValueArray() *RowRecord {
 				err := binary.Read(bytes.NewBuffer(valueBytes), binary.BigEndian, value)
 				if err != nil {
 					fmt.Printf("binary.Read Error Occurred! {%v}\n", err)
-					return
+					return nil
 				}
 				field.SetInt64Value(*value)
 			case TSDataType.FLOAT:
@@ -85,7 +85,7 @@ func (s_ *SessionDataSet) ConstructRowRecordFromValueArray() *RowRecord {
 				err := binary.Read(bytes.NewBuffer(valueBytes), binary.BigEndian, value)
 				if err != nil {
 					fmt.Printf("binary.Read Error Occurred! {%v}\n", err)
-					return
+					return nil
 				}
 				field.SetFloat32Value(*value)
 			case TSDataType.DOUBLE:
