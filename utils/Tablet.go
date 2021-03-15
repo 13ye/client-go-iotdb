@@ -54,7 +54,7 @@ func (t_ *Tablet) GetTimestampsBinary() []byte {
 	for _, v := range t_.timestamps {
 		err := binary.Write(buf, binary.BigEndian, v)
 		if err != nil {
-			fmt.Println("binary.Write failed:", err)
+			fmt.Println("Tablet binary.Write TimeStamp failed:", err)
 			return nil
 		}
 	}
@@ -68,27 +68,72 @@ func (t_ *Tablet) GetValuesBinary() []byte {
 			for i := 0; i < len(t_.timestamps); i++ {
 				if v_str, ok := t_.values[i][j].(string); ok {
 					v_bytes := []byte(v_str)
-					err := binary.Write(buf, binary.BigEndian, len(v_bytes))
+					err := binary.Write(buf, binary.BigEndian, int32(len(v_bytes)))
 					if err != nil {
-						fmt.Println("binary.Write failed:", err)
+						panic(fmt.Sprintln("Tablet binary.Write TEXT failed1:", err))
 						return nil
 					}
 					err = binary.Write(buf, binary.BigEndian, v_bytes)
 					if err != nil {
-						fmt.Println("binary.Write failed:", err)
+						panic(fmt.Sprintln("Tablet binary.Write TEXT failed2:", err))
 						return nil
 					}
 				} else {
-					fmt.Printf("value is not type string, i[%v] j[%v]\n", i, j)
+					panic(fmt.Sprintf("value is not type string, i[%v] j[%v]\n", i, j))
 					return nil
 				}
 
 			}
 		} else {
 			for i := 0; i < len(t_.timestamps); i++ {
+				switch t_.dataTypes[j] {
+				case TSDataType.BOOLEAN:
+					{
+						_, ok := t_.values[i][j].(bool)
+						if !ok {
+							panic("value is not type bool")
+							return nil
+						}
+					}
+				case TSDataType.INT32:
+					{
+						_, ok := t_.values[i][j].(int32)
+						if !ok {
+							panic("value is not type int32")
+							return nil
+						}
+					}
+				case TSDataType.INT64:
+					{
+						_, ok := t_.values[i][j].(int64)
+						if !ok {
+							panic("value is not type int64")
+							return nil
+						}
+					}
+				case TSDataType.FLOAT:
+					{
+						_, ok := t_.values[i][j].(float32)
+						if !ok {
+							panic("value is not type float32")
+							return nil
+						}
+					}
+				case TSDataType.DOUBLE:
+					{
+						_, ok := t_.values[i][j].(float64)
+						if !ok {
+							panic("value is not type float64")
+							return nil
+						}
+					}
+				default:
+					panic("Unsupported DataType!!!")
+					break
+				}
 				err := binary.Write(buf, binary.BigEndian, t_.values[i][j])
 				if err != nil {
-					fmt.Println("binary.Write failed:", err)
+					panic(fmt.Sprintf("binary.Write failed:{%v}\n", err))
 					return nil
 				}
 			}

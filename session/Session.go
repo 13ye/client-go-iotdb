@@ -301,13 +301,15 @@ func (s_ *Session) CheckTimeSeriesExists(path string) bool {
 func (s_ *Session) ExecuteQueryStatement(sql string) *utils.SessionDataSet {
 	request := &rpc.TSExecuteStatementReq{SessionId: s_.SessionId, Statement: sql, StatementId: s_.StatementId, FetchSize: &s_.FetchSize}
 	response, err := s_.Client.ExecuteQueryStatement(Default_Ctx, request)
+	ignoreTimeStamp := false
+	if response.IgnoreTimeStamp != nil {
+		ignoreTimeStamp = *response.IgnoreTimeStamp
+	}
 	if err != nil {
 		panic(err)
 		return nil
-	} else {
-		fmt.Println(response)
 	}
-	return utils.NewSessionDataSet(sql, response.Columns, *utils.GetTSDataTypeFromStringList(response.DataTypeList), response.ColumnNameIndexMap, *response.QueryId, s_.Client, s_.SessionId, response.QueryDataSet, *response.IgnoreTimeStamp)
+	return utils.NewSessionDataSet(sql, response.Columns, *utils.GetTSDataTypeFromStringList(response.DataTypeList), response.ColumnNameIndexMap, *response.QueryId, s_.Client, s_.SessionId, response.QueryDataSet, ignoreTimeStamp)
 }
 
 func (s_ *Session) ExecuteNonQueryStatement(sql string) bool {
@@ -323,34 +325,81 @@ func (s_ *Session) value2Bytes(dataTypes []int32, values []interface{}) []byte {
 		if dataTypes[k] == utils.TSDataType.TEXT {
 			v_str, ok := v.(string)
 			if !ok {
-				fmt.Println("value is not type string")
+				panic("value is not type string")
 				return nil
 			}
 			v_bytes := []byte(v_str)
 			err1 := binary.Write(buf, binary.BigEndian, byte(dataTypes[k]))
 			if err1 != nil {
-				fmt.Println("binary.Write failed:", err1)
+				panic(fmt.Sprintln("binary.Write failed1:", err1))
 				return nil
 			}
-			err2 := binary.Write(buf, binary.BigEndian, len(v_bytes))
+			err2 := binary.Write(buf, binary.BigEndian, int32(len(v_bytes)))
 			if err2 != nil {
-				fmt.Println("binary.Write failed:", err2)
+				panic(fmt.Sprintln("binary.Write failed2:", err2))
 				return nil
 			}
 			err3 := binary.Write(buf, binary.BigEndian, v_bytes)
 			if err3 != nil {
-				fmt.Println("binary.Write failed:", err3)
+				panic(fmt.Sprintln("binary.Write failed3:", err3))
 				return nil
 			}
 		} else {
 			err1 := binary.Write(buf, binary.BigEndian, byte(dataTypes[k]))
 			if err1 != nil {
-				fmt.Println("binary.Write failed:", err1)
+				panic(fmt.Sprintf("binary.Write failed1 type[%v]: err[%v]", dataTypes[k], err1))
 				return nil
+			}
+			switch dataTypes[k] {
+			case utils.TSDataType.BOOLEAN:
+				{
+					_, ok := v.(bool)
+					if !ok {
+						panic("value is not type bool")
+						return nil
+					}
+				}
+			case utils.TSDataType.INT32:
+				{
+					_, ok := v.(int32)
+					if !ok {
+						panic("value is not type int32")
+						return nil
+					}
+				}
+			case utils.TSDataType.INT64:
+				{
+					_, ok := v.(int64)
+					if !ok {
+						panic("value is not type int64")
+						return nil
+					}
+				}
+			case utils.TSDataType.FLOAT:
+				{
+					_, ok := v.(float32)
+					if !ok {
+						panic("value is not type float32")
+						return nil
+					}
+				}
+			case utils.TSDataType.DOUBLE:
+				{
+					_, ok := v.(float64)
+					if !ok {
+						panic("value is not type float64")
+						return nil
+					}
+				}
+			default:
+				{
+					panic("Unsupported dataType!!!")
+					break
+				}
 			}
 			err2 := binary.Write(buf, binary.BigEndian, v)
 			if err2 != nil {
-				fmt.Println("binary.Write failed:", err2)
+				panic(fmt.Sprintf("binary.Write failed2 type[%v]: err[%v]", dataTypes[k], err2))
 				return nil
 			}
 		}

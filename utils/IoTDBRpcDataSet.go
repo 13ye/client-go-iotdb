@@ -26,7 +26,7 @@ type IoTDBRpcDataSet struct {
 	columnOrdinalDict          map[string]int32
 	columnTypeDeduplicatedList []int32
 	timeBytes                  []byte
-	currentBitMap              [][]byte
+	currentBitMap              []byte
 	value                      [][]byte
 	queryDataSet               *rpc.TSQueryDataSet
 	isClosed                   bool
@@ -79,8 +79,7 @@ func NewIoTDBRpcDataSet(sql string, columnNameList []string, columnTypeList []in
 		}
 	}
 
-	r.currentBitMap = make([][]byte, len(r.columnTypeDeduplicatedList))
-	r.columnOrdinalDict = make(map[string]int32)
+	r.currentBitMap = make([]byte, len(r.columnTypeDeduplicatedList))
 	r.queryDataSet = queryDataSet
 	r.isClosed = false
 	r.emptyResultSet = false
@@ -95,14 +94,24 @@ func (r_ *IoTDBRpcDataSet) Close() {
 	}
 	if r_.client != nil {
 		status, _ := r_.client.CloseOperation(context.Background(), &rpc.TSCloseOperationReq{SessionId: r_.sessionId, QueryId: &r_.queryId})
-		fmt.Printf("Close Session {%v}, message {%v}\n", r_.sessionId, status.GetMessage())
+		fmt.Printf("Close IoTDBRpcDataSet Session{%v}, message{%v}\n", r_.sessionId, status.GetMessage())
 		r_.isClosed = true
 		r_.client = nil
 	}
 }
 
 func (r_ *IoTDBRpcDataSet) Next() bool {
-	// TO BE DONE
+	if r_.HasCachedResult() {
+		r_.ConstructOneRow()
+		return true
+	}
+	if r_.emptyResultSet {
+		return false
+	}
+	if r_.fetchResults() {
+		r_.ConstructOneRow()
+		return true
+	}
 	return false
 }
 
@@ -111,13 +120,13 @@ func (r_ *IoTDBRpcDataSet) HasCachedResult() bool {
 }
 
 func (r_ *IoTDBRpcDataSet) IsNull(index int32, rowNum int) bool {
-	bitMap := r_.currentBitMap[index][0]
+	bitMap := r_.currentBitMap[index]
 	shift := rowNum % 8
 	return (byte((flag >> shift)) & (bitMap & byte(0xff))) == 0
 }
 
 func (r_ *IoTDBRpcDataSet) IsNullByIndex(columnIndex int) bool {
-	index := r_.columnOrdinalDict[r_.findColumnNameByIndex(columnIndex)]
+	index := r_.columnOrdinalDict[r_.findColumnNameByIndex(columnIndex)] - start_index
 	if index < 0 {
 		return true
 	}
@@ -161,7 +170,7 @@ func (r_ *IoTDBRpcDataSet) ConstructOneRow() {
 	r_.queryDataSet.Time = r_.queryDataSet.Time[8:]
 	for k, bitMap_buffer := range r_.queryDataSet.GetBitmapList() {
 		if r_.rowsIndex%8 == 0 {
-			r_.currentBitMap[k] = append(r_.currentBitMap[k], bitMap_buffer[0])
+			r_.currentBitMap[k] = bitMap_buffer[0]
 			r_.queryDataSet.BitmapList[k] = bitMap_buffer[1:]
 		}
 		if !r_.IsNull(int32(k), r_.rowsIndex) {
@@ -169,32 +178,31 @@ func (r_ *IoTDBRpcDataSet) ConstructOneRow() {
 			dataType := r_.columnTypeDeduplicatedList[k]
 			switch dataType {
 			case TSDataType.BOOLEAN:
-				r_.value[k] = valueBuffer[:1]
+				r_.value = append(r_.value, valueBuffer[:1])
 				r_.queryDataSet.ValueList[k] = valueBuffer[1:]
 			case TSDataType.INT32:
-				r_.value[k] = valueBuffer[:4]
+				r_.value = append(r_.value, valueBuffer[:4])
 				r_.queryDataSet.ValueList[k] = valueBuffer[4:]
 			case TSDataType.INT64:
-				r_.value[k] = valueBuffer[:8]
+				r_.value = append(r_.value, valueBuffer[:8])
 				r_.queryDataSet.ValueList[k] = valueBuffer[8:]
 			case TSDataType.FLOAT:
-				r_.value[k] = valueBuffer[:4]
+				r_.value = append(r_.value, valueBuffer[:4])
 				r_.queryDataSet.ValueList[k] = valueBuffer[4:]
 			case TSDataType.DOUBLE:
-				r_.value[k] = valueBuffer[:8]
+				r_.value = append(r_.value, valueBuffer[:8])
 				r_.queryDataSet.ValueList[k] = valueBuffer[8:]
 			case TSDataType.TEXT:
 				var length int32
 				buf := bytes.NewBuffer(valueBuffer[:4])
 				err := binary.Read(buf, binary.BigEndian, &length)
 				if err != nil {
-					fmt.Println("binary.Read Error in ConstructOneRow!!", err)
-					panic(err)
+					panic(fmt.Sprintln("binary.Read Error in ConstructOneRow!!", err))
 				}
-				r_.value[k] = valueBuffer[4 : 4+length]
+				r_.value = append(r_.value, valueBuffer[4:4+length])
 				r_.queryDataSet.ValueList[k] = valueBuffer[4+length:]
 			default:
-				fmt.Printf("Unsupported dataType {%v}\n", dataType)
+				panic(fmt.Sprintf("Unsupported dataType {%v}\n", dataType))
 			}
 		}
 	}
@@ -239,4 +247,8 @@ func (r_ *IoTDBRpcDataSet) GetValues() [][]byte {
 
 func (r_ *IoTDBRpcDataSet) GetTimeBytes() []byte {
 	return r_.timeBytes
+}
+
+func (r_ *IoTDBRpcDataSet) GetHasCachedRecord() bool {
+	return r_.hasCachedRecord
 }

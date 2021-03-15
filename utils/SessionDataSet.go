@@ -35,7 +35,14 @@ func (s_ *SessionDataSet) HasNext() bool {
 	return s_.MyRpcDataSet.Next()
 }
 
-func (s_ *SessionDataSet) Next() {
+func (s_ *SessionDataSet) Next() *RowRecord {
+	if !s_.MyRpcDataSet.GetHasCachedRecord() {
+		if !s_.HasNext() {
+			return nil
+		}
+	}
+	s_.MyRpcDataSet.hasCachedRecord = false
+	return s_.ConstructRowRecordFromValueArray()
 }
 
 func (s_ *SessionDataSet) ConstructRowRecordFromValueArray() *RowRecord {
