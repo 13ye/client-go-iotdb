@@ -103,7 +103,7 @@ func (s_ *Session) Open(enable_rpc_compression bool) {
 		s_.StatementId, _ = s_.Client.RequestStatementId(Default_Ctx, s_.SessionId)
 		s_.IsClose = false
 	} else {
-		fmt.Println("Error OpenRequest:", err, rsp)
+		panic(fmt.Sprintln("Error OpenRequest:", err, rsp))
 		return
 	}
 }

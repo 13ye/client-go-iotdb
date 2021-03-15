@@ -1,3 +1,5 @@
+// This is a Demo of
+// Golang Client for IoTDB
 package main
 
 import (
@@ -7,7 +9,12 @@ import (
 )
 
 func main() {
+	// create a session, using NewDefaultSession
+	// with default Parameters or NewSession with
+	// Specific Parameters Provided
 	s_ := session.NewDefaultSession()
+
+	// 2. open this Session
 	s_.Open(false)
 
 	// set and delete storage groups
@@ -34,6 +41,8 @@ func main() {
 		encoding_lst_ = append(encoding_lst_, utils.TSEncoding.PLAIN)
 		compressor_lst_ = append(compressor_lst_, utils.Compressor.SNAPPY)
 	}
+
+	// create multiple timeseries
 	s_.CreateMultiTimeSeries(ts_path_lst_, data_type_lst_, encoding_lst_, compressor_lst_)
 
 	// delete time series
@@ -63,7 +72,7 @@ func main() {
 	values2_ := [][]interface{}{{false, int32(10), int64(11), float32(1.1), float64(10011.1), "test01"},
 		{true, int32(100), int64(11111), float32(1.25), float64(101.0), "test02"},
 		{false, int32(100), int64(1), float32(188.1), float64(688.25), "test03"},
-		{true, int32(0), int64(0), float32(0), float64(6.25), "test04"}} // Non-ASCII text will cause error since bytes can only hold 0-128 nums.
+		{true, int32(0), int64(0), float32(0), float64(6.25), "test04"}}
 	timestamps_ := []int64{4, 5, 6, 7}
 	tablet_ := utils.NewTablet("root.sg_test_01.d_01", measurements_, data_types_, values2_, timestamps_)
 	s_.InsertTablet(*tablet_)
@@ -84,8 +93,8 @@ func main() {
 	}
 	session_data_set.CloseOperationHandle()
 
-	fmt.Println("All executions done!!")
-
-	// close
+	// close session
 	s_.Close(false)
+
+	fmt.Println("All executions done!!")
 }
