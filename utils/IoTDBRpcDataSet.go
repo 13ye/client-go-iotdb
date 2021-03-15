@@ -47,6 +47,7 @@ func NewIoTDBRpcDataSet(sql string, columnNameList []string, columnTypeList []in
 	r.defaultTimeOut = 1000
 	r.columnNameList = make([]string, 0)
 	r.columnTypeList = make([]int32, 0)
+	r.columnOrdinalDict = make(map[string]int32)
 
 	if !ignoreTimestamp {
 		r.columnNameList = append(r.columnNameList, timestamp_str)

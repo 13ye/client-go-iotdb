@@ -84,6 +84,7 @@ func (s_ *Session) Open(enable_rpc_compression bool) {
 	}
 	iprot := protocolFactory.GetProtocol(transport)
 	oprot := protocolFactory.GetProtocol(transport)
+	s_.Transport = transport
 
 	s_.Client = rpc.NewTSIServiceClient(thrift.NewTStandardClient(iprot, oprot))
 	req := rpc.NewTSOpenSessionReq()
@@ -299,7 +300,13 @@ func (s_ *Session) CheckTimeSeriesExists(path string) bool {
 
 func (s_ *Session) ExecuteQueryStatement(sql string) *utils.SessionDataSet {
 	request := &rpc.TSExecuteStatementReq{SessionId: s_.SessionId, Statement: sql, StatementId: s_.StatementId, FetchSize: &s_.FetchSize}
-	response, _ := s_.Client.ExecuteQueryStatement(Default_Ctx, request)
+	response, err := s_.Client.ExecuteQueryStatement(Default_Ctx, request)
+	if err != nil {
+		panic(err)
+		return nil
+	} else {
+		fmt.Println(response)
+	}
 	return utils.NewSessionDataSet(sql, response.Columns, *utils.GetTSDataTypeFromStringList(response.DataTypeList), response.ColumnNameIndexMap, *response.QueryId, s_.Client, s_.SessionId, response.QueryDataSet, *response.IgnoreTimeStamp)
 }
 

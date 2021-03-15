@@ -58,4 +58,7 @@ func main() {
 	data_type_list_ := [][]int32{data_types_, data_types_}
 	device_ids_ := []string{"root.sg_test_01.d_01", "root.sg_test_01.d_01"}
 	s_.InsertRecords(device_ids_, measurements_list_, data_type_list_, values_list_, []int64{2, 3})
+
+	// close
+	s_.Close(false)
 }
