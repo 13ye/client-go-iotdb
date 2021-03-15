@@ -7,6 +7,22 @@ import (
 	"sort"
 )
 
+/*
+creating a tablet for insertion
+  for example, considering device: root.sg1.d1
+    timestamps,     m1,    m2,     m3
+             1,  125.3,  True,  text1
+             2,  111.6, False,  text2
+             3,  688.6,  True,  text3
+Notice: The tablet should not have empty cell
+The tablet will be sorted at the initialization by timestamps
+
+:param deviceId: String, IoTDB time series path to device layer (without sensor).
+:param measurements: List, sensors.
+:param dataTypes: TSDataType List, specify value types for sensors.
+:param values: 2-D List, the values of each row should be the outer list element.
+:param timestamps: List.
+*/
 type Tablet struct {
 	deviceId     string
 	measurements []string

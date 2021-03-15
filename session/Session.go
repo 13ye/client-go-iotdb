@@ -95,11 +95,11 @@ func (s_ *Session) Open(enable_rpc_compression bool) {
 	rsp, err := s_.Client.OpenSession(Default_Ctx, req)
 	if err == nil {
 		if rsp.GetServerProtocolVersion() != s_.ProtocolVersion {
-			fmt.Printf("Error ProtocolVersion Differ, Client Version{%v}, Server Version{%v}\n", s_.ProtocolVersion, rsp.GetServerProtocolVersion())
+			panic(fmt.Sprintf("Error ProtocolVersion Differ, Client Version{%v}, Server Version{%v}\n", s_.ProtocolVersion, rsp.GetServerProtocolVersion()))
 			return
 		}
-		fmt.Printf("OpenRsp:::%v\n", rsp)
 		s_.SessionId = *rsp.SessionId
+		fmt.Printf("OpenSession{%v} OpenRsp:::{%v}\n", s_.SessionId, rsp)
 		s_.StatementId, _ = s_.Client.RequestStatementId(Default_Ctx, s_.SessionId)
 		s_.IsClose = false
 	} else {
@@ -108,22 +108,26 @@ func (s_ *Session) Open(enable_rpc_compression bool) {
 	}
 }
 
+// set one storage group
 func (s_ *Session) SetStorageGroup(groupName string) bool {
 	status, _ := s_.Client.SetStorageGroup(Default_Ctx, s_.SessionId, groupName)
 	fmt.Printf("Setting storage group {%v} message: {%v}\n", groupName, status.GetMessage())
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
+// delete one storage group.
 func (s_ *Session) DeleteStorageGroup(storageGroup string) bool {
 	return s_.DeleteStorageGroups([]string{storageGroup})
 }
 
+// delete multiple storage groups.
 func (s_ *Session) DeleteStorageGroups(storageGroups []string) bool {
 	status, _ := s_.Client.DeleteStorageGroups(Default_Ctx, s_.SessionId, storageGroups)
 	fmt.Printf("Delete storage group {%v} message: {%v}\n", storageGroups, status.GetMessage())
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
+// create single time series
 func (s_ *Session) CreateTimeSeries(tsPath string, dataType int32, encoding int32, compressor int32) bool {
 	request := &rpc.TSCreateTimeseriesReq{SessionId: s_.SessionId, Path: tsPath, DataType: dataType, Encoding: encoding, Compressor: compressor}
 	status, _ := s_.Client.CreateTimeseries(Default_Ctx, request)
@@ -131,6 +135,7 @@ func (s_ *Session) CreateTimeSeries(tsPath string, dataType int32, encoding int3
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
+// create multiple time series
 func (s_ *Session) CreateMultiTimeSeries(tsPaths []string, dataTypes []int32, encodings []int32, compressors []int32) bool {
 	request := &rpc.TSCreateMultiTimeseriesReq{SessionId: s_.SessionId, Paths: tsPaths, DataTypes: dataTypes, Encodings: encodings, Compressors: compressors}
 	status, _ := s_.Client.CreateMultiTimeseries(Default_Ctx, request)
@@ -138,12 +143,14 @@ func (s_ *Session) CreateMultiTimeSeries(tsPaths []string, dataTypes []int32, en
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
+// delete multiple time series, including data and schema
 func (s_ *Session) DeleteTimeSeries(paths []string) bool {
 	status, _ := s_.Client.DeleteTimeseries(Default_Ctx, s_.SessionId, paths)
 	fmt.Printf("Delete multiple time series {%v} message: {%v}\n", paths, status.GetMessage())
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
+// delete all data <= time in multiple time series
 func (s_ *Session) DeleteData(paths []string, startTime int64, endTime int64) bool {
 	request := &rpc.TSDeleteDataReq{SessionId: s_.SessionId, Paths: paths, StartTime: startTime, EndTime: endTime}
 	status, _ := s_.Client.DeleteData(Default_Ctx, request)
@@ -151,6 +158,7 @@ func (s_ *Session) DeleteData(paths []string, startTime int64, endTime int64) bo
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
+// special case for inserting one row of String (TEXT) value
 func (s_ *Session) InsertStrRecord(deviceId string, measurements []string, values_str []string, timestamp int64) bool {
 	dataTypes := make([]int32, len(values_str))
 	values := make([]interface{}, len(values_str))
@@ -164,6 +172,10 @@ func (s_ *Session) InsertStrRecord(deviceId string, measurements []string, value
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
+// insert one row of record into database, if you want improve your performance, please use insertTablet method
+//  for example a record at time=10086 with three measurements is:
+//    timestamp,     m1,    m2,     m3
+//        10086,  125.3,  True,  text1
 func (s_ *Session) InsertRecord(deviceId string, measurements []string, dataTypes []int32, values []interface{}, timestamp int64) bool {
 	request := s_.GenInsertRecordReq(deviceId, measurements, values, dataTypes, timestamp)
 	if request == nil {
@@ -175,6 +187,7 @@ func (s_ *Session) InsertRecord(deviceId string, measurements []string, dataType
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
+// insert multiple rows of data, records are independent to each other, in other words, there's no relationship between those records
 func (s_ *Session) InsertRecords(deviceIds []string, measurements_list [][]string, dataTypes_list [][]int32, values_list [][]interface{}, timestamps []int64) bool {
 	request := s_.GenInsertRecordsReq(deviceIds, measurements_list, values_list, dataTypes_list, timestamps)
 	if request == nil {
@@ -186,6 +199,13 @@ func (s_ *Session) InsertRecords(deviceIds []string, measurements_list [][]strin
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
+// insert one tablet, in a tablet, for each timestamp, the number of measurements is same
+// for example three records in the same device can form a tablet:
+//   timestamps,     m1,    m2,     m3
+//            1,  125.3,  True,  text1
+//            2,  111.6, False,  text2
+//            3,  688.6,  True,  text3
+// Notice: The tablet should not have empty cell The tablet itself is sorted
 func (s_ *Session) InsertTablet(tablet utils.Tablet) bool {
 	request := s_.GenInsertTabletReq(tablet)
 	if request == nil {
@@ -197,6 +217,7 @@ func (s_ *Session) InsertTablet(tablet utils.Tablet) bool {
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
+// insert multiple tablets, tablets are independent to each other
 func (s_ *Session) InsertTablets(tablets []utils.Tablet) bool {
 	request := s_.GenInsertTabletsReq(tablets)
 	if request == nil {
@@ -208,6 +229,9 @@ func (s_ *Session) InsertTablets(tablets []utils.Tablet) bool {
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
+// this method NOT insert data into database and the
+// server just return after accept the request, this
+// method should be used to test other time cost in client
 func (s_ *Session) TestInsertRecord(deviceId string, measurements []string, dataTypes []int32, values []interface{}, timestamp int64) bool {
 	request := s_.GenInsertRecordReq(deviceId, measurements, values, dataTypes, timestamp)
 	status, _ := s_.Client.TestInsertRecord(Default_Ctx, request)
@@ -215,6 +239,9 @@ func (s_ *Session) TestInsertRecord(deviceId string, measurements []string, data
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
+// this method NOT insert data into database and the
+// server just return after accept the request, this
+// method should be used to test other time cost in client
 func (s_ *Session) TestInsertRecords(deviceIds []string, measurements_list [][]string, dataTypes_list [][]int32, values_list [][]interface{}, timestamps []int64) bool {
 	request := s_.GenInsertRecordsReq(deviceIds, measurements_list, values_list, dataTypes_list, timestamps)
 	status, _ := s_.Client.TestInsertRecords(Default_Ctx, request)
@@ -222,6 +249,9 @@ func (s_ *Session) TestInsertRecords(deviceIds []string, measurements_list [][]s
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
+// this method NOT insert data into database and the
+// server just return after accept the request, this
+// method should be used to test other time cost in client
 func (s_ *Session) TestInsertTablet(tablet utils.Tablet) bool {
 	request := s_.GenInsertTabletReq(tablet)
 	if request == nil {
@@ -233,6 +263,9 @@ func (s_ *Session) TestInsertTablet(tablet utils.Tablet) bool {
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
+// this method NOT insert data into database and the
+// server just return after accept the request, this
+// method should be used to test other time cost in client
 func (s_ *Session) TestInsertTablets(tablets []utils.Tablet) bool {
 	request := s_.GenInsertTabletsReq(tablets)
 	if request == nil {
@@ -291,6 +324,7 @@ func (s_ *Session) GenInsertTabletsReq(tablet_list []utils.Tablet) *rpc.TSInsert
 	return request
 }
 
+// check whether a specific time series exists
 func (s_ *Session) CheckTimeSeriesExists(path string) bool {
 	dataset := s_.ExecuteQueryStatement(fmt.Sprintf("SHOW TIMESERIES %v", path))
 	rlt := dataset.HasNext()
@@ -298,6 +332,7 @@ func (s_ *Session) CheckTimeSeriesExists(path string) bool {
 	return rlt
 }
 
+// execute query sql statement and returns SessionDataSet
 func (s_ *Session) ExecuteQueryStatement(sql string) *utils.SessionDataSet {
 	request := &rpc.TSExecuteStatementReq{SessionId: s_.SessionId, Statement: sql, StatementId: s_.StatementId, FetchSize: &s_.FetchSize}
 	response, err := s_.Client.ExecuteQueryStatement(Default_Ctx, request)
@@ -312,6 +347,7 @@ func (s_ *Session) ExecuteQueryStatement(sql string) *utils.SessionDataSet {
 	return utils.NewSessionDataSet(sql, response.Columns, *utils.GetTSDataTypeFromStringList(response.DataTypeList), response.ColumnNameIndexMap, *response.QueryId, s_.Client, s_.SessionId, response.QueryDataSet, ignoreTimeStamp)
 }
 
+// execute non-query sql statement
 func (s_ *Session) ExecuteNonQueryStatement(sql string) bool {
 	request := &rpc.TSExecuteStatementReq{SessionId: s_.SessionId, Statement: sql, StatementId: s_.StatementId}
 	response, _ := s_.Client.ExecuteUpdateStatement(Default_Ctx, request)

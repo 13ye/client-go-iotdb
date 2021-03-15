@@ -127,6 +127,7 @@ func (r_ *IoTDBRpcDataSet) IsNull(index int32, rowNum int) bool {
 
 func (r_ *IoTDBRpcDataSet) IsNullByIndex(columnIndex int) bool {
 	index := r_.columnOrdinalDict[r_.findColumnNameByIndex(columnIndex)] - start_index
+	// time column will never be None
 	if index < 0 {
 		return true
 	}
@@ -134,8 +135,9 @@ func (r_ *IoTDBRpcDataSet) IsNullByIndex(columnIndex int) bool {
 }
 
 func (r_ *IoTDBRpcDataSet) IsNullByName(columnName string) bool {
-	// will return 0 (default int) when columnOrdinalDict without this name
+	// will return 0 (default int) if columnOrdinalDict without this name
 	index := r_.columnOrdinalDict[columnName] - start_index
+	// time column will never be None
 	if index < 0 {
 		return true
 	}
