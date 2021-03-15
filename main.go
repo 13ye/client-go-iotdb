@@ -4,7 +4,6 @@ import (
 	"client-go-iotdb/session"
 	"client-go-iotdb/utils"
 	"fmt"
-	_ "time"
 )
 
 func main() {

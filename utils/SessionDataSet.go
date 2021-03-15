@@ -67,7 +67,7 @@ func (s_ *SessionDataSet) ConstructRowRecordFromValueArray() *RowRecord {
 				value := new(bool)
 				err := binary.Read(bytes.NewBuffer(valueBytes), binary.BigEndian, value)
 				if err != nil {
-					fmt.Printf("binary.Read Error Occurred! {%v}\n", err)
+					panic(fmt.Sprintf("binary.Read Error Occurred! {%v}\n", err))
 					return nil
 				}
 				field.SetBooleanValue(*value)
@@ -75,7 +75,7 @@ func (s_ *SessionDataSet) ConstructRowRecordFromValueArray() *RowRecord {
 				value := new(int32)
 				err := binary.Read(bytes.NewBuffer(valueBytes), binary.BigEndian, value)
 				if err != nil {
-					fmt.Printf("binary.Read Error Occurred! {%v}\n", err)
+					panic(fmt.Sprintf("binary.Read Error Occurred! {%v}\n", err))
 					return nil
 				}
 				field.SetInt32Value(*value)
@@ -83,7 +83,7 @@ func (s_ *SessionDataSet) ConstructRowRecordFromValueArray() *RowRecord {
 				value := new(int64)
 				err := binary.Read(bytes.NewBuffer(valueBytes), binary.BigEndian, value)
 				if err != nil {
-					fmt.Printf("binary.Read Error Occurred! {%v}\n", err)
+					panic(fmt.Sprintf("binary.Read Error Occurred! {%v}\n", err))
 					return nil
 				}
 				field.SetInt64Value(*value)
@@ -91,7 +91,7 @@ func (s_ *SessionDataSet) ConstructRowRecordFromValueArray() *RowRecord {
 				value := new(float32)
 				err := binary.Read(bytes.NewBuffer(valueBytes), binary.BigEndian, value)
 				if err != nil {
-					fmt.Printf("binary.Read Error Occurred! {%v}\n", err)
+					panic(fmt.Sprintf("binary.Read Error Occurred! {%v}\n", err))
 					return nil
 				}
 				field.SetFloat32Value(*value)
@@ -99,21 +99,16 @@ func (s_ *SessionDataSet) ConstructRowRecordFromValueArray() *RowRecord {
 				value := new(float64)
 				err := binary.Read(bytes.NewBuffer(valueBytes), binary.BigEndian, value)
 				if err != nil {
-					fmt.Printf("binary.Read Error Occurred! {%v}\n", err)
+					panic(fmt.Sprintf("binary.Read Error Occurred! {%v}\n", err))
 					return nil
 				}
 				field.SetFloat64Value(*value)
 			case TSDataType.TEXT:
 				// here may cause some problems, bytes or string?
-				value := new(string)
-				err := binary.Read(bytes.NewBuffer(valueBytes), binary.BigEndian, value)
-				if err != nil {
-					fmt.Printf("binary.Read Error Occurred! {%v}\n", err)
-					return nil
-				}
-				field.SetStringValue(*value)
+				value := valueBytes
+				field.SetStringValue(string(value))
 			default:
-				fmt.Printf("Unsupported dataType {%v}\n", dataType)
+				panic(fmt.Sprintf("Unsupported dataType {%v}\n", dataType))
 			}
 		} else {
 		}
@@ -124,7 +119,7 @@ func (s_ *SessionDataSet) ConstructRowRecordFromValueArray() *RowRecord {
 	buf := bytes.NewBuffer(s_.MyRpcDataSet.GetTimeBytes())
 	err := binary.Read(buf, binary.BigEndian, timestamp)
 	if err != nil {
-		fmt.Printf("binary.Read Error Occurred! {%v}\n", err)
+		panic(fmt.Sprintf("binary.Read Error Occurred! {%v}\n", err))
 		return nil
 	}
 	return NewRowRecord(*timestamp, outFields)
