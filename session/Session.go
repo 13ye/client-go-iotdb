@@ -26,17 +26,21 @@ type Session struct {
 	ZoneId          string
 }
 
-var default_Ctx = context.Background()
-var default_UserName = "root"
-var default_Passwd = "root"
-var default_Host = "192.168.5.171"
-var default_Port = "6667"
-var default_ZoneId = "UTC+8"
-var default_SuccessCode int64 = 200
-var default_FetchSize int32 = 10000
+var Default_Ctx = context.Background()
+var Default_UserName = "root"
+var Default_Passwd = "root"
+var Default_Host = "192.168.5.171"
+var Default_Port = "6667"
+var Default_ZoneId = "UTC+8"
+var Default_SuccessCode int64 = 200
+var Default_FetchSize int32 = 10000
 
-func NewSession() *Session {
-	return &Session{Host: default_Host, Port: default_Port, ZoneId: default_ZoneId, User: default_UserName, Password: default_Passwd, SuccessCode: default_SuccessCode, FetchSize: default_FetchSize, IsClose: true, ProtocolVersion: rpc.TSProtocolVersion_IOTDB_SERVICE_PROTOCOL_V3}
+func NewSession(host string, port string, zoneId string, user string, password string) *Session {
+	return &Session{Host: host, Port: port, ZoneId: zoneId, User: user, Password: password, SuccessCode: Default_SuccessCode, FetchSize: Default_FetchSize, IsClose: true, ProtocolVersion: rpc.TSProtocolVersion_IOTDB_SERVICE_PROTOCOL_V3}
+}
+
+func NewDefaultSession() *Session {
+	return &Session{Host: Default_Host, Port: Default_Port, ZoneId: Default_ZoneId, User: Default_UserName, Password: Default_Passwd, SuccessCode: Default_SuccessCode, FetchSize: Default_FetchSize, IsClose: true, ProtocolVersion: rpc.TSProtocolVersion_IOTDB_SERVICE_PROTOCOL_V3}
 }
 
 func (s_ *Session) Is_Open() bool {
@@ -49,7 +53,7 @@ func (s_ *Session) Close(enable_rpc_compression bool) {
 	}
 	defer s_.Transport.Close()
 	req := &rpc.TSCloseSessionReq{SessionId: s_.SessionId}
-	s_.Client.CloseSession(default_Ctx, req)
+	s_.Client.CloseSession(Default_Ctx, req)
 	s_.IsClose = true
 }
 
@@ -87,7 +91,7 @@ func (s_ *Session) Open(enable_rpc_compression bool) {
 	req.Username = &s_.User
 	req.Password = &s_.Password
 	req.ZoneId = s_.ZoneId
-	rsp, err := s_.Client.OpenSession(default_Ctx, req)
+	rsp, err := s_.Client.OpenSession(Default_Ctx, req)
 	if err == nil {
 		if rsp.GetServerProtocolVersion() != s_.ProtocolVersion {
 			fmt.Printf("Error ProtocolVersion Differ, Client Version{%v}, Server Version{%v}\n", s_.ProtocolVersion, rsp.GetServerProtocolVersion())
@@ -95,7 +99,7 @@ func (s_ *Session) Open(enable_rpc_compression bool) {
 		}
 		fmt.Printf("OpenRsp:::%v\n", rsp)
 		s_.SessionId = *rsp.SessionId
-		s_.StatementId, _ = s_.Client.RequestStatementId(default_Ctx, s_.SessionId)
+		s_.StatementId, _ = s_.Client.RequestStatementId(Default_Ctx, s_.SessionId)
 		s_.IsClose = false
 	} else {
 		fmt.Println("Error OpenRequest:", err, rsp)
@@ -104,7 +108,7 @@ func (s_ *Session) Open(enable_rpc_compression bool) {
 }
 
 func (s_ *Session) SetStorageGroup(groupName string) bool {
-	status, _ := s_.Client.SetStorageGroup(default_Ctx, s_.SessionId, groupName)
+	status, _ := s_.Client.SetStorageGroup(Default_Ctx, s_.SessionId, groupName)
 	fmt.Printf("Setting storage group {%v} message: {%v}\n", groupName, status.GetMessage())
 	return s_.verifySuccess(int64(status.GetCode()))
 }
@@ -114,34 +118,34 @@ func (s_ *Session) DeleteStorageGroup(storageGroup string) bool {
 }
 
 func (s_ *Session) DeleteStorageGroups(storageGroups []string) bool {
-	status, _ := s_.Client.DeleteStorageGroups(default_Ctx, s_.SessionId, storageGroups)
+	status, _ := s_.Client.DeleteStorageGroups(Default_Ctx, s_.SessionId, storageGroups)
 	fmt.Printf("Delete storage group {%v} message: {%v}\n", storageGroups, status.GetMessage())
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
 func (s_ *Session) CreateTimeSeries(tsPath string, dataType int32, encoding int32, compressor int32) bool {
 	request := &rpc.TSCreateTimeseriesReq{SessionId: s_.SessionId, Path: tsPath, DataType: dataType, Encoding: encoding, Compressor: compressor}
-	status, _ := s_.Client.CreateTimeseries(default_Ctx, request)
+	status, _ := s_.Client.CreateTimeseries(Default_Ctx, request)
 	fmt.Printf("Creating time series {%v} message: {%v}\n", tsPath, status.GetMessage())
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
 func (s_ *Session) CreateMultiTimeSeries(tsPaths []string, dataTypes []int32, encodings []int32, compressors []int32) bool {
 	request := &rpc.TSCreateMultiTimeseriesReq{SessionId: s_.SessionId, Paths: tsPaths, DataTypes: dataTypes, Encodings: encodings, Compressors: compressors}
-	status, _ := s_.Client.CreateMultiTimeseries(default_Ctx, request)
+	status, _ := s_.Client.CreateMultiTimeseries(Default_Ctx, request)
 	fmt.Printf("Creating multiple time series {%v} message: {%v}\n", tsPaths, status.GetMessage())
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
 func (s_ *Session) DeleteTimeSeries(paths []string) bool {
-	status, _ := s_.Client.DeleteTimeseries(default_Ctx, s_.SessionId, paths)
+	status, _ := s_.Client.DeleteTimeseries(Default_Ctx, s_.SessionId, paths)
 	fmt.Printf("Delete multiple time series {%v} message: {%v}\n", paths, status.GetMessage())
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
 func (s_ *Session) DeleteData(paths []string, startTime int64, endTime int64) bool {
 	request := &rpc.TSDeleteDataReq{SessionId: s_.SessionId, Paths: paths, StartTime: startTime, EndTime: endTime}
-	status, _ := s_.Client.DeleteData(default_Ctx, request)
+	status, _ := s_.Client.DeleteData(Default_Ctx, request)
 	fmt.Printf("Delete data from{%v} message: {%v}\n", paths, status.GetMessage())
 	return s_.verifySuccess(int64(status.GetCode()))
 }
@@ -154,7 +158,7 @@ func (s_ *Session) InsertStrRecord(deviceId string, measurements []string, value
 		values[k] = v
 	}
 	request := s_.GenInsertRecordReq(deviceId, measurements, values, dataTypes, timestamp)
-	status, _ := s_.Client.InsertRecord(default_Ctx, request)
+	status, _ := s_.Client.InsertRecord(Default_Ctx, request)
 	fmt.Printf("Insert One Record to device: {%v} message: {%v}\n", deviceId, status.GetMessage())
 	return s_.verifySuccess(int64(status.GetCode()))
 }
@@ -165,7 +169,7 @@ func (s_ *Session) InsertRecord(deviceId string, measurements []string, dataType
 		fmt.Println("GenInsertTabletReq Failed!")
 		return false
 	}
-	status, _ := s_.Client.InsertRecord(default_Ctx, request)
+	status, _ := s_.Client.InsertRecord(Default_Ctx, request)
 	fmt.Printf("Insert One Record to device: {%v} message: {%v}\n", deviceId, status.GetMessage())
 	return s_.verifySuccess(int64(status.GetCode()))
 }
@@ -176,7 +180,7 @@ func (s_ *Session) InsertRecords(deviceIds []string, measurements_list [][]strin
 		fmt.Println("GenInsertTabletReq Failed!")
 		return false
 	}
-	status, _ := s_.Client.InsertRecords(default_Ctx, request)
+	status, _ := s_.Client.InsertRecords(Default_Ctx, request)
 	fmt.Printf("Insert Multiple Records to device: {%v} message: {%v}\n", deviceIds, status.GetMessage())
 	return s_.verifySuccess(int64(status.GetCode()))
 }
@@ -187,7 +191,7 @@ func (s_ *Session) InsertTablet(tablet utils.Tablet) bool {
 		fmt.Println("GenInsertTabletReq Failed!")
 		return false
 	}
-	status, _ := s_.Client.InsertTablet(default_Ctx, request)
+	status, _ := s_.Client.InsertTablet(Default_Ctx, request)
 	fmt.Printf("Insert One Tablet to device: {%v} message: {%v}\n", tablet.GetDeviceId(), status.GetMessage())
 	return s_.verifySuccess(int64(status.GetCode()))
 }
@@ -198,21 +202,21 @@ func (s_ *Session) InsertTablets(tablets []utils.Tablet) bool {
 		fmt.Println("GenInsertTabletsReq Failed!")
 		return false
 	}
-	status, _ := s_.Client.InsertTablets(default_Ctx, request)
+	status, _ := s_.Client.InsertTablets(Default_Ctx, request)
 	fmt.Printf("Insert Multiple Tablets, message: {%v}\n", status.GetMessage())
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
 func (s_ *Session) TestInsertRecord(deviceId string, measurements []string, dataTypes []int32, values []interface{}, timestamp int64) bool {
 	request := s_.GenInsertRecordReq(deviceId, measurements, values, dataTypes, timestamp)
-	status, _ := s_.Client.TestInsertRecord(default_Ctx, request)
+	status, _ := s_.Client.TestInsertRecord(Default_Ctx, request)
 	fmt.Printf("Test Insert One Record to device: {%v} message: {%v}\n", deviceId, status.GetMessage())
 	return s_.verifySuccess(int64(status.GetCode()))
 }
 
 func (s_ *Session) TestInsertRecords(deviceIds []string, measurements_list [][]string, dataTypes_list [][]int32, values_list [][]interface{}, timestamps []int64) bool {
 	request := s_.GenInsertRecordsReq(deviceIds, measurements_list, values_list, dataTypes_list, timestamps)
-	status, _ := s_.Client.TestInsertRecords(default_Ctx, request)
+	status, _ := s_.Client.TestInsertRecords(Default_Ctx, request)
 	fmt.Printf("Test Insert Multiple Records to device: {%v} message: {%v}\n", deviceIds, status.GetMessage())
 	return s_.verifySuccess(int64(status.GetCode()))
 }
@@ -223,7 +227,7 @@ func (s_ *Session) TestInsertTablet(tablet utils.Tablet) bool {
 		fmt.Println("GenInsertTabletReq Failed!")
 		return false
 	}
-	status, _ := s_.Client.TestInsertTablet(default_Ctx, request)
+	status, _ := s_.Client.TestInsertTablet(Default_Ctx, request)
 	fmt.Printf("Test Insert One Tablet to device: {%v} message: {%v}\n", tablet.GetDeviceId(), status.GetMessage())
 	return s_.verifySuccess(int64(status.GetCode()))
 }
@@ -234,7 +238,7 @@ func (s_ *Session) TestInsertTablets(tablets []utils.Tablet) bool {
 		fmt.Println("GenInsertTabletsReq Failed!")
 		return false
 	}
-	status, _ := s_.Client.TestInsertTablets(default_Ctx, request)
+	status, _ := s_.Client.TestInsertTablets(Default_Ctx, request)
 	fmt.Printf("Test Insert Multiple Tablets, message: {%v}\n", status.GetMessage())
 	return s_.verifySuccess(int64(status.GetCode()))
 }
@@ -295,13 +299,13 @@ func (s_ *Session) CheckTimeSeriesExists(path string) bool {
 
 func (s_ *Session) ExecuteQueryStatement(sql string) *utils.SessionDataSet {
 	request := &rpc.TSExecuteStatementReq{SessionId: s_.SessionId, Statement: sql, StatementId: s_.StatementId, FetchSize: &s_.FetchSize}
-	response, _ := s_.Client.ExecuteQueryStatement(default_Ctx, request)
+	response, _ := s_.Client.ExecuteQueryStatement(Default_Ctx, request)
 	return utils.NewSessionDataSet(sql, response.Columns, *utils.GetTSDataTypeFromStringList(response.DataTypeList), response.ColumnNameIndexMap, *response.QueryId, s_.Client, s_.SessionId, response.QueryDataSet, *response.IgnoreTimeStamp)
 }
 
 func (s_ *Session) ExecuteNonQueryStatement(sql string) bool {
 	request := &rpc.TSExecuteStatementReq{SessionId: s_.SessionId, Statement: sql, StatementId: s_.StatementId}
-	response, _ := s_.Client.ExecuteUpdateStatement(default_Ctx, request)
+	response, _ := s_.Client.ExecuteUpdateStatement(Default_Ctx, request)
 	fmt.Printf("ExecuteNonQueryStatement {%v} message: {%v}\n", sql, response.GetStatus().GetMessage())
 	return s_.verifySuccess(int64(response.GetStatus().GetCode()))
 }
@@ -351,13 +355,13 @@ func (s_ *Session) GetTimeZone() string {
 	if s_.ZoneId != "" {
 		return s_.ZoneId
 	}
-	response, _ := s_.Client.GetTimeZone(default_Ctx, s_.SessionId)
+	response, _ := s_.Client.GetTimeZone(Default_Ctx, s_.SessionId)
 	return response.GetTimeZone()
 }
 
 func (s_ *Session) SetTimeZone(zoneId string) {
 	request := &rpc.TSSetTimeZoneReq{SessionId: s_.SessionId, TimeZone: zoneId}
-	status, _ := s_.Client.SetTimeZone(default_Ctx, request)
+	status, _ := s_.Client.SetTimeZone(Default_Ctx, request)
 	fmt.Printf("Settring Time ZoneId as {%v}, message: {%v}\n", zoneId, status.GetMessage())
 	s_.ZoneId = zoneId
 }
