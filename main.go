@@ -7,8 +7,6 @@ import (
 )
 
 func main() {
-	s := []int32{1, 2, 3}
-	fmt.Println(len(s), s[1:1+2], s[1:1])
 	s_ := session.NewDefaultSession()
 	s_.Open(false)
 
